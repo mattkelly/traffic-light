@@ -30,11 +30,11 @@ entity TrafficLightSystem is
 			-- switch 3 changes between fault readout and lights on LEDs
 			switches : in std_logic_vector(3 downto 0);
 
-			-- I think theres 8 LEDs?
+			-- 8 LEDs
 			leds : out std_logic_vector(7 downto 0);
 			
 			-- Output to denote faulty module --
-			faulty_mod : out std_logic_vector(2 downto 0);
+			faulty_mod : out std_logic_vector(2 downto 0)
 	);
 end TrafficLightSystem;
 
@@ -53,13 +53,20 @@ architecture Behavioral of TrafficLightSystem is
 	signal sreset : std_logic;  -- reset
 	
 	signal mod0_ryg1, mod0_ryg2, mod1_ryg1, mod1_ryg2, mod2_ryg1, mod2_ryg2 : std_logic_vector(2 downto 0);
-	signal mod0_ryg1_, mod0_ryg2_, mod1_ryg1_, mod1_ryg2_, mod2_ryg1_, mod2_ryg2_ : std_logic_vector(2 downto 0);
+	signal mod0_ryg1_x, mod0_ryg2_x, mod1_ryg1_x, mod1_ryg2_x, mod2_ryg1_x, mod2_ryg2_x : std_logic_vector(2 downto 0);
 
 	-- Red (001), Yellow (010), Green (100)
 	signal ryg_light1 : std_logic_vector(2 downto 0);
 	signal ryg_light2 : std_logic_vector(2 downto 0);
 	
+	
+	-- Signal to denote faulty module
+	signal sfaulty_mod : std_logic_vector(2 downto 0);
+	
 begin
+
+	-- reset
+	sreset <= btn_north;
 
 	mod0: TrafficLightController PORT MAP (
 		clk_50MHz => clk_50MHz,
@@ -80,45 +87,56 @@ begin
 		ryg_light2 => mod2_ryg2
 	);
 	
+	-- outputs to indicate faulty modules
+	faulty_mod(0) <= sfaulty_mod(0);
+	faulty_mod(1) <= sfaulty_mod(1);
+	faulty_mod(2) <= sfaulty_mod(2);
+	
 	-- inject faults
-	mod0_ryg1_ <= mod0_ryg1 or switches(0);
-	mod0_ryg2_ <= mod0_ryg2 or switches(0);
+	mod0_ryg1_x <= mod0_ryg1 or (switches(0) & switches(0) & switches(0));
+	mod0_ryg2_x <= mod0_ryg2 or (switches(0) & switches(0) & switches(0));
 
-	mod1_ryg1_ <= mod1_ryg1 or switches(1);
-	mod1_ryg2_ <= mod1_ryg2 or switches(1);
+	mod1_ryg1_x <= mod1_ryg1 or (switches(1) & switches(1) & switches(1));
+	mod1_ryg2_x <= mod1_ryg2 or (switches(1) & switches(1) & switches(1));
 
-	mod2_ryg1_ <= mod2_ryg1 or switches(2);
-	mod2_ryg2_ <= mod2_ryg2 or switches(2);
+	mod2_ryg1_x <= mod2_ryg1 or (switches(2) & switches(2) & switches(2));
+	mod2_ryg2_x <= mod2_ryg2 or (switches(2) & switches(2) & switches(2));
 
 	--voter--
-	ryg_light1 <= (mod0_ryg1_ and mod1_ryg1_) or (mod0_ryg1_ and mod2_ryg1_) or (mod1_ryg1_ and mod2_ryg1_);
-	ryg_light2 <= (mod0_ryg2_ and mod1_ryg2_) or (mod0_ryg2_ and mod2_ryg2_) or (mod1_ryg2_ and mod2_ryg2_);
+	ryg_light1 <= (mod0_ryg1_x and mod1_ryg1_x) or (mod0_ryg1_x and mod2_ryg1_x) or (mod1_ryg1_x and mod2_ryg1_x);
+	ryg_light2 <= (mod0_ryg2_x and mod1_ryg2_x) or (mod0_ryg2_x and mod2_ryg2_x) or (mod1_ryg2_x and mod2_ryg2_x);
 	
 	-- faulty module detection
-	process( ryg_light1, ryg_light2 )
+	process( sreset, ryg_light1, ryg_light2, sreset, mod0_ryg1, mod1_ryg1, mod2_ryg1, mod0_ryg2, mod1_ryg2, mod2_ryg2, sfaulty_mod )
 	begin
 		if sreset = '1' then
-			faulty_mod <= "000";
+			sfaulty_mod <= "000";
 		end if;
 		-- once fault is detected, its output stay high until reset
-		if faulty_mod(0) = '0' and (mod0_ryg1 /= ryg_light1 or mod0_ryg2 /= ryg_light2) then
-			faulty_mod(0) <= '1';
+		if sfaulty_mod(0) = '0' and (mod0_ryg1 /= ryg_light1 or mod0_ryg2 /= ryg_light2) then
+			sfaulty_mod(0) <= '1';
+		else
+			sfaulty_mod(0) <= '0';
 		end if;
-		if faulty_mod(1) = '0' and (mod1_ryg1 /= ryg_light1 or mod1_ryg2 /= ryg_light2) then
-			faulty_mod(1) <= '1';
-		end if;
-		if faulty_mod(2) = '0' and (mod2_ryg1 /= ryg_light1 or mod2_ryg2 /= ryg_light2) then
-			faulty_mod(2) <= '1';
+		if sfaulty_mod(1) = '0' and (mod1_ryg1 /= ryg_light1 or mod1_ryg2 /= ryg_light2) then
+			sfaulty_mod(1) <= '1';
+		else
+			sfaulty_mod(1) <= '0';
+		end if;		
+		if sfaulty_mod(2) = '0' and (mod2_ryg1 /= ryg_light1 or mod2_ryg2 /= ryg_light2) then
+			sfaulty_mod(2) <= '1';
+		else
+			sfaulty_mod(2) <= '0';
 		end if;
 	end process;
 
 	-- process to control led outputs
-	process( switches(3), ryg_light2, ryg_light1, faulty_mod)
+	process( switches(3), ryg_light2, ryg_light1, sfaulty_mod )
 	begin
 		if switches(3) = '0' then
-			leds <= '0' & ryg_light1 & ryg_light2;
-		elsif
-			leds<= "00000" & faulty_mod;
+			leds <= "00" & ryg_light1 & ryg_light2;
+		else
+			leds <= "00000" & sfaulty_mod;
 		end if;
 	end process;
 

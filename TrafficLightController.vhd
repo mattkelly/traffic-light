@@ -103,7 +103,7 @@ begin
 	------------------------------------
 	-- Assign outputs
 	------------------------------------
-	process( state )
+	process( state, sreset )
 	begin
 		if sreset = '1' then
 			ryg_light1 <= "001";
