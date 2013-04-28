@@ -24,7 +24,7 @@ use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
 entity TrafficLightSystem is
 	port( clk_50MHz  : in std_logic; -- 50 MHz clock
-			btn_north  : in std_logic; -- Synchronous reset
+			btn_north  : in std_logic; -- Asynchronous reset
 
 			-- switches 0-2 inject faults into modules,
 			-- switch 3 changes between fault readout and lights on LEDs
@@ -42,7 +42,7 @@ architecture Behavioral of TrafficLightSystem is
 
 	component TrafficLightController is
 		port( clk_50MHz  : in std_logic; -- 50 MHz clock
-				btn_north  : in std_logic; -- Synchronous reset
+				reset      : in std_logic; -- Asynchronous reset
 				
 				-- Red (001), Yellow (010), Green (100)
 				ryg_light1 : out std_logic_vector(2 downto 0);
@@ -59,7 +59,6 @@ architecture Behavioral of TrafficLightSystem is
 	signal ryg_light1 : std_logic_vector(2 downto 0);
 	signal ryg_light2 : std_logic_vector(2 downto 0);
 	
-	
 	-- Signal to denote faulty module
 	signal sfaulty_mod : std_logic_vector(2 downto 0);
 	
@@ -70,27 +69,25 @@ begin
 
 	mod0: TrafficLightController PORT MAP (
 		clk_50MHz => clk_50MHz,
-		btn_north => btn_north,
+		reset => sreset,
 		ryg_light1 => mod0_ryg1,
 		ryg_light2 => mod0_ryg2
 	);
 	mod1: TrafficLightController PORT MAP (
 		clk_50MHz => clk_50MHz,
-		btn_north => btn_north,
+		reset => sreset,
 		ryg_light1 => mod1_ryg1,
 		ryg_light2 => mod1_ryg2
 	);
 	mod2: TrafficLightController PORT MAP (
 		clk_50MHz => clk_50MHz,
-		btn_north => btn_north,
+		reset => sreset,
 		ryg_light1 => mod2_ryg1,
 		ryg_light2 => mod2_ryg2
 	);
 	
 	-- outputs to indicate faulty modules
-	faulty_mod(0) <= sfaulty_mod(0);
-	faulty_mod(1) <= sfaulty_mod(1);
-	faulty_mod(2) <= sfaulty_mod(2);
+	faulty_mod <= sfaulty_mod;
 	
 	-- inject faults
 	mod0_ryg1_x <= mod0_ryg1 or (switches(0) & switches(0) & switches(0));
@@ -107,36 +104,46 @@ begin
 	ryg_light2 <= (mod0_ryg2_x and mod1_ryg2_x) or (mod0_ryg2_x and mod2_ryg2_x) or (mod1_ryg2_x and mod2_ryg2_x);
 	
 	-- faulty module detection
-	process( sreset, ryg_light1, ryg_light2, sreset, mod0_ryg1, mod1_ryg1, mod2_ryg1, mod0_ryg2, mod1_ryg2, mod2_ryg2, sfaulty_mod )
+	--process( clk_50MHz, sreset, ryg_light1, ryg_light2, sreset, 
+	--			mod0_ryg1, mod1_ryg1, mod2_ryg1, mod0_ryg2, mod1_ryg2, mod2_ryg2, sfaulty_mod )
+	process( clk_50MHz, sreset )
 	begin
+		
 		if sreset = '1' then
 			sfaulty_mod <= "000";
-		end if;
-		-- once fault is detected, its output stay high until reset
-		if sfaulty_mod(0) = '0' and (mod0_ryg1 /= ryg_light1 or mod0_ryg2 /= ryg_light2) then
-			sfaulty_mod(0) <= '1';
-		else
-			sfaulty_mod(0) <= '0';
-		end if;
-		if sfaulty_mod(1) = '0' and (mod1_ryg1 /= ryg_light1 or mod1_ryg2 /= ryg_light2) then
-			sfaulty_mod(1) <= '1';
-		else
-			sfaulty_mod(1) <= '0';
-		end if;		
-		if sfaulty_mod(2) = '0' and (mod2_ryg1 /= ryg_light1 or mod2_ryg2 /= ryg_light2) then
-			sfaulty_mod(2) <= '1';
-		else
-			sfaulty_mod(2) <= '0';
+		elsif clk_50MHz'event and clk_50MHz = '1' then
+			-- once fault is detected, its output stays high until reset
+			if sfaulty_mod(0) = '0' and (mod0_ryg1 /= ryg_light1 or mod0_ryg2 /= ryg_light2) then
+				sfaulty_mod(0) <= '1';
+			else
+				sfaulty_mod(0) <= '0';
+			end if;
+			
+			if sfaulty_mod(1) = '0' and (mod1_ryg1 /= ryg_light1 or mod1_ryg2 /= ryg_light2) then
+				sfaulty_mod(1) <= '1';
+			else
+				sfaulty_mod(1) <= '0';
+			end if;		
+			
+			if sfaulty_mod(2) = '0' and (mod2_ryg1 /= ryg_light1 or mod2_ryg2 /= ryg_light2) then
+				sfaulty_mod(2) <= '1';
+			else
+				sfaulty_mod(2) <= '0';
+			end if;
 		end if;
 	end process;
 
 	-- process to control led outputs
-	process( switches(3), ryg_light2, ryg_light1, sfaulty_mod )
+	process( sreset, switches(3), ryg_light2, ryg_light1, sfaulty_mod )
 	begin
-		if switches(3) = '0' then
-			leds <= "00" & ryg_light1 & ryg_light2;
+		if sreset = '1' then
+			leds <= (others => '0');
 		else
-			leds <= "00000" & sfaulty_mod;
+			if switches(3) = '0' then
+				leds <= "00" & ryg_light1 & ryg_light2;
+			else
+				leds <= "00000" & sfaulty_mod;
+			end if;
 		end if;
 	end process;
 

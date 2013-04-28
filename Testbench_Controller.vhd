@@ -38,7 +38,7 @@ ARCHITECTURE behavior OF Testbench_Controller IS
     COMPONENT TrafficLightController
     PORT(
          clk_50MHz : IN  std_logic;
-         btn_north : IN  std_logic;
+         reset     : IN  std_logic;
          ryg_light1 : OUT  std_logic_vector(2 downto 0);
          ryg_light2 : OUT  std_logic_vector(2 downto 0)
         );
@@ -81,9 +81,9 @@ BEGIN
    begin		
       
 		-- Reset
-		btn_north <= '1';
+		reset <= '1';
 		wait for 200 ns;
-		btn_north <= '0';
+		reset <= '0';
 
       wait;
    end process;
