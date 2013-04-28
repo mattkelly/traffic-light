@@ -38,8 +38,8 @@ architecture Behavioral of TrafficLightController is
 	type tstate is (S0, S1, S2, S3, S4, S5, S6, S7);
 	signal state : tstate;
 	
-	-- TODO how long?
-	signal s1_sec : std_logic; -- Timer signal - high every second
+	-- Timer signal - high every second
+	signal s1_sec : std_logic;
 	
 	-- Counter
 	signal scount	   : std_logic_vector(15 downto 0);
@@ -140,7 +140,11 @@ begin
 			scount <= (others => '0');
 		elsif clk_50MHz'event and clk_50MHz = '1' then
 			if sclk_en = '1' then
-				scount <= scount + 1;
+				if scount_rst = '1' then
+					scount <= (others => '0');
+				else
+					scount <= scount + 1;
+				end if;
 			end if;
 		end if;
 	end process;
@@ -155,11 +159,11 @@ begin
 			sclk_en <= '0';
 		elsif clk_50MHz'event and clk_50MHz = '1' then 
 			if sclk_divider = 1000 then 
-			  sclk_divider <= (others => '0'); 
-			  sclk_en <= '1';
+				sclk_divider <= (others => '0'); 
+				sclk_en <= '1';
 			else 
-			  sclk_divider <= sclk_divider + 1; 
-			  sclk_en <= '0'; 
+				sclk_divider <= sclk_divider + 1; 
+				sclk_en <= '0'; 
 			end if; 
 		end if; 
 	end process;

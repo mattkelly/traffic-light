@@ -104,46 +104,35 @@ begin
 	ryg_light2 <= (mod0_ryg2_x and mod1_ryg2_x) or (mod0_ryg2_x and mod2_ryg2_x) or (mod1_ryg2_x and mod2_ryg2_x);
 	
 	-- faulty module detection
-	--process( clk_50MHz, sreset, ryg_light1, ryg_light2, sreset, 
-	--			mod0_ryg1, mod1_ryg1, mod2_ryg1, mod0_ryg2, mod1_ryg2, mod2_ryg2, sfaulty_mod )
 	process( clk_50MHz, sreset )
 	begin
 		
 		if sreset = '1' then
 			sfaulty_mod <= "000";
 		elsif clk_50MHz'event and clk_50MHz = '1' then
+			-- clocking this to get rid of combinatorial loops for faulty_mod
 			-- once fault is detected, its output stays high until reset
-			if sfaulty_mod(0) = '0' and (mod0_ryg1 /= ryg_light1 or mod0_ryg2 /= ryg_light2) then
+			if sfaulty_mod(0) = '0' and (mod0_ryg1_x /= ryg_light1 or mod0_ryg2_x /= ryg_light2) then
 				sfaulty_mod(0) <= '1';
-			else
-				sfaulty_mod(0) <= '0';
 			end if;
 			
-			if sfaulty_mod(1) = '0' and (mod1_ryg1 /= ryg_light1 or mod1_ryg2 /= ryg_light2) then
+			if sfaulty_mod(1) = '0' and (mod1_ryg1_x /= ryg_light1 or mod1_ryg2_x /= ryg_light2) then
 				sfaulty_mod(1) <= '1';
-			else
-				sfaulty_mod(1) <= '0';
 			end if;		
 			
-			if sfaulty_mod(2) = '0' and (mod2_ryg1 /= ryg_light1 or mod2_ryg2 /= ryg_light2) then
+			if sfaulty_mod(2) = '0' and (mod2_ryg1_x /= ryg_light1 or mod2_ryg2_x /= ryg_light2) then
 				sfaulty_mod(2) <= '1';
-			else
-				sfaulty_mod(2) <= '0';
 			end if;
 		end if;
 	end process;
 
 	-- process to control led outputs
-	process( sreset, switches(3), ryg_light2, ryg_light1, sfaulty_mod )
+	process( switches(3), ryg_light2, ryg_light1, sfaulty_mod )
 	begin
-		if sreset = '1' then
-			leds <= (others => '0');
+		if switches(3) = '0' then
+			leds <= "00" & ryg_light1 & ryg_light2;
 		else
-			if switches(3) = '0' then
-				leds <= "00" & ryg_light1 & ryg_light2;
-			else
-				leds <= "00000" & sfaulty_mod;
-			end if;
+			leds <= "00000" & sfaulty_mod;
 		end if;
 	end process;
 
