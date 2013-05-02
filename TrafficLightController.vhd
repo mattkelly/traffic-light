@@ -51,8 +51,8 @@ architecture Behavioral of TrafficLightController is
 
 begin
 
-	s1_sec <= '1' 		when scount = (50000-1) else '0';
-	scount_rst <= '1' when scount = (50000-1) else '0';
+	s1_sec <= '1' 		when scount = (50-1) else '0';
+	scount_rst <= '1' when scount = (50-1) else '0';
 
 	------------------------------------
 	-- State machine

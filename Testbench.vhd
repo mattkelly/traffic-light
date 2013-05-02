@@ -87,6 +87,16 @@ BEGIN
 		btn_north <= '1';
 		wait for 1 us;
 		btn_north <= '0';
+		
+		-- let it run for a while
+		wait for 15 ms;
+		
+		-- inject a fault
+		switches(0) <= '1';
+		wait for 2 ms;
+		
+		-- inject another fault
+		switches(1) <= '1';
 
       wait;
    end process;

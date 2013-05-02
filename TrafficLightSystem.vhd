@@ -58,6 +58,8 @@ architecture Behavioral of TrafficLightSystem is
 	-- Red (001), Yellow (010), Green (100)
 	signal ryg_light1 : std_logic_vector(2 downto 0);
 	signal ryg_light2 : std_logic_vector(2 downto 0);
+	signal ryg_light1_x : std_logic_vector(2 downto 0);
+	signal ryg_light2_x : std_logic_vector(2 downto 0);
 	
 	-- Signal to denote faulty module
 	signal sfaulty_mod : std_logic_vector(2 downto 0);
@@ -103,6 +105,10 @@ begin
 	ryg_light1 <= (mod0_ryg1_x and mod1_ryg1_x) or (mod0_ryg1_x and mod2_ryg1_x) or (mod1_ryg1_x and mod2_ryg1_x);
 	ryg_light2 <= (mod0_ryg2_x and mod1_ryg2_x) or (mod0_ryg2_x and mod2_ryg2_x) or (mod1_ryg2_x and mod2_ryg2_x);
 	
+	-- if multiple faults, go to safe state
+	ryg_light1_x <= "001" when ryg_light1 = "111" else ryg_light1;
+	ryg_light2_x <= "001" when ryg_light2 = "111" else ryg_light2;
+	
 	-- faulty module detection
 	process( clk_50MHz, sreset )
 	begin
@@ -127,10 +133,10 @@ begin
 	end process;
 
 	-- process to control led outputs
-	process( switches(3), ryg_light2, ryg_light1, sfaulty_mod )
+	process( switches(3), ryg_light2_x, ryg_light1_x, sfaulty_mod )
 	begin
 		if switches(3) = '0' then
-			leds <= "00" & ryg_light1 & ryg_light2;
+			leds <= "00" & ryg_light1_x & ryg_light2_x;
 		else
 			leds <= "00000" & sfaulty_mod;
 		end if;
