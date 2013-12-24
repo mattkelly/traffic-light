@@ -1,4 +1,4 @@
-This is a simple traffic light system with two lights, used to demonstrate
+This is a simple traffic light system with two lights used to demonstrate
 fault tolerant design using Triple Modular Redundancy (TMR).
 
 Target platform: Spartan-3E
